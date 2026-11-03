@@ -1,4 +1,4 @@
-; Engine configuration for Marshmellow Dance Studio prototype
+; Engine configuration for Marshmellow Dance Studio vertical slice
 config_version=5
 
 [application]
@@ -9,6 +9,7 @@ run/main_scene="res://main.tscn"
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
+window/handheld/orientation=0
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
