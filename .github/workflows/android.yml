@@ -21,7 +21,7 @@ jobs:
       - name: Install Godot and export templates
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.3.3
+          version: 4.2.2
           use-dotnet: false
           include-templates: true
 
@@ -53,15 +53,15 @@ jobs:
 
       - name: Install Godot Android export templates
         run: |
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.3.3.stable"
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.2.2.stable"
           curl -fsSL -o /tmp/godot-templates.tpz \
-            https://github.com/godotengine/godot/releases/download/4.3.3-stable/Godot_v4.3.3-stable_export_templates.tpz
+            https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz
           unzip -p /tmp/godot-templates.tpz templates/android_debug.apk \
-            > "$HOME/.local/share/godot/export_templates/4.3.3.stable/android_debug.apk"
+            > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_debug.apk"
           unzip -p /tmp/godot-templates.tpz templates/android_release.apk \
-            > "$HOME/.local/share/godot/export_templates/4.3.3.stable/android_release.apk"
+            > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_release.apk"
           unzip -p /tmp/godot-templates.tpz templates/android_source.zip \
-            > "$HOME/.local/share/godot/export_templates/4.3.3.stable/android_source.zip"
+            > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_source.zip"
 
       - name: Build debug APK
         run: mkdir -p build && godot --headless --verbose --path . --export-debug "Android" build/marshmellow-dance-studio-debug.apk
