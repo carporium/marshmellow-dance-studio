@@ -51,6 +51,9 @@ jobs:
       - name: Import and validate project
         run: godot --headless --editor --path . --quit
 
+      - name: Install Android build template
+        run: godot --headless --editor --path . --install-android-build-template
+
       - name: Build debug APK
         run: mkdir -p build && godot --headless --verbose --path . --export-debug "Android" build/marshmellow-dance-studio-debug.apk
 
