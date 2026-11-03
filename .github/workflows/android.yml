@@ -63,6 +63,23 @@ jobs:
           unzip -p /tmp/godot-templates.tpz templates/android_source.zip \
             > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_source.zip"
 
+      - name: Create debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          {
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$RUNNER_TEMP/debug.keystore"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android"
+          } >> "$GITHUB_ENV"
+
       - name: Build debug APK
         run: mkdir -p build && godot --headless --verbose --path . --export-debug "Android" build/marshmellow-dance-studio-debug.apk
 
