@@ -6,6 +6,12 @@ const MOVES := [
 	"Kick Ball Change", "Chasse", "Reach and Pose", "Body Roll"
 ]
 const FORMATIONS := ["Line", "Triangle", "Diamond", "V Formation"]
+const UPGRADES := {
+	"Mirrors": 40,
+	"Barres": 55,
+	"Stage lights": 70,
+	"Speaker wall": 85,
+}
 const SAVE_PATH := "user://studio.json"
 
 var studio_name := "Marshmellow"
@@ -18,6 +24,8 @@ var formation := "Line"
 var skills := 0
 var company_unlocked := false
 var competition_result := ""
+var room_level := 1
+var decorations: Array = []
 var feedback_rating := 0
 var feedback_liked := ""
 var feedback_confusing := ""
@@ -37,6 +45,12 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#241b3d"))
 	draw_circle(Vector2(size.x * 0.88, size.y * 0.1), size.y * 0.35, Color("#503b72"))
 	draw_circle(Vector2(size.x * 0.08, size.y * 0.9), size.y * 0.4, Color("#332653"))
+	var floor_rect := Rect2(size.x * 0.08, size.y * 0.62, size.x * 0.84, size.y * 0.24)
+	draw_rect(floor_rect, Color("#6a4c73"), true)
+	draw_line(floor_rect.position, floor_rect.position + Vector2(floor_rect.size.x, 0), Color("#f3c6a5"), 3)
+	for index in range(room_level):
+		var x := floor_rect.position.x + floor_rect.size.x * (0.25 + index * 0.15)
+		draw_line(Vector2(x, floor_rect.position.y), Vector2(x, floor_rect.end.y), Color("#805f86"), 2)
 
 func clear_screen(title: String) -> void:
 	for child in get_children():
@@ -89,11 +103,14 @@ func show_home() -> void:
 	add_text("A playful offline choreography studio for your next big performance.", 21)
 	add_text("Students: %d  |  Skill points: %d  |  Routine counts: %d/8  |  Formation: %s" %
 		[students.size(), skills, routine.size(), formation])
+	add_text("Studio room level: %d  |  Upgrades: %s" %
+		[room_level, ", ".join(decorations) if not decorations.is_empty() else "Practice room"])
 	if company_unlocked:
 		add_text("COMPANY UNLOCKED — your top dancers can now perform at the advanced level!", 18)
 	if not competition_result.is_empty():
 		add_text(competition_result, 18)
 	add_button("Set up studio", show_setup)
+	add_button("Build studio room", show_builder)
 	add_button("Students and classes", show_students)
 	add_button("Choreography editor", show_choreo)
 	add_button("Practice and tuition", practise)
@@ -125,6 +142,38 @@ func _set_theme(value: String) -> void:
 	theme_name = value
 	save_game()
 	show_setup()
+
+func show_builder() -> void:
+	clear_screen("Build your studio")
+	add_text("Place upgrades that make your studio feel ready for bigger performances.")
+	add_text("ROOM MAP  •  reception  |  practice floor  |  stage lights", 18)
+	add_text("Current room level: %d  |  Coins: %d" % [room_level, coins])
+	for upgrade in UPGRADES:
+		if upgrade in decorations:
+			add_button("%s installed" % upgrade, func(): _show_upgrade(upgrade))
+		else:
+			add_button("Buy %s (%d coins)" % [upgrade, UPGRADES[upgrade]], func(): _buy_upgrade(upgrade))
+	add_text("Each installed upgrade expands the room map and improves the studio rating.")
+	add_back()
+
+func _show_upgrade(upgrade: String) -> void:
+	clear_screen("Studio upgrade")
+	add_text("%s is installed in your room." % upgrade)
+	add_text("Your dancers can use this space in future stage and class updates.")
+	add_back()
+
+func _buy_upgrade(upgrade: String) -> void:
+	var cost: int = UPGRADES[upgrade]
+	if coins < cost:
+		clear_screen("Not enough coins")
+		add_text("Practice classes and tuition can earn the %d coins needed for %s." % [cost, upgrade])
+		add_back()
+		return
+	coins -= cost
+	decorations.append(upgrade)
+	room_level += 1
+	save_game()
+	show_builder()
 
 func show_students() -> void:
 	clear_screen("Students and classes")
@@ -281,6 +330,7 @@ func save_game() -> void:
 		"students": students, "discipline": discipline, "routine": routine,
 		"formation": formation, "skills": skills, "company_unlocked": company_unlocked,
 		"competition_result": competition_result, "feedback_rating": feedback_rating,
+		"room_level": room_level, "decorations": decorations,
 		"feedback_liked": feedback_liked, "feedback_confusing": feedback_confusing,
 		"feedback_next": feedback_next
 	}
@@ -306,6 +356,8 @@ func load_game() -> void:
 	company_unlocked = bool(data.get("company_unlocked", company_unlocked))
 	competition_result = str(data.get("competition_result", competition_result))
 	feedback_rating = int(data.get("feedback_rating", feedback_rating))
+	room_level = int(data.get("room_level", room_level))
+	decorations = data.get("decorations", decorations)
 	feedback_liked = str(data.get("feedback_liked", feedback_liked))
 	feedback_confusing = str(data.get("feedback_confusing", feedback_confusing))
 	feedback_next = str(data.get("feedback_next", feedback_next))
