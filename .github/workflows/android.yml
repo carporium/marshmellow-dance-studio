@@ -51,6 +51,19 @@ jobs:
       - name: Import and validate project
         run: godot --headless --editor --path . --quit
 
+      - name: Install Godot Android export templates
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.4.1.stable"
+          curl -fsSL -o /tmp/godot-templates.tpz \
+            https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_export_templates.tpz
+          unzip -p /tmp/godot-templates.tpz templates/android_debug.apk \
+            > "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_debug.apk"
+          unzip -p /tmp/godot-templates.tpz templates/android_release.apk \
+            > "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_release.apk"
+          unzip -p /tmp/godot-templates.tpz templates/android_source.zip \
+            > "$HOME/.local/share/godot/export_templates/4.4.1.stable/android_source.zip"
+          godot --headless --editor --path . --install-android-build-template --quit
+
       - name: Build debug APK
         run: mkdir -p build && godot --headless --verbose --path . --export-debug "Android" build/marshmellow-dance-studio-debug.apk
 
