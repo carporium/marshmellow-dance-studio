@@ -1,5 +1,113 @@
 extends Control
 
+class StudioView extends Control:
+	signal hotspot_pressed(name: String)
+
+	var mode := "studio"
+	var elapsed := 0.0
+	var room_level := 1
+	var formation := "Line"
+	var dancer_count := 3
+	var decorations: Array = []
+	var routine: Array = []
+
+	func _ready() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		set_process(true)
+
+	func _process(delta: float) -> void:
+		elapsed += delta
+		queue_redraw()
+
+	func _gui_input(event: InputEvent) -> void:
+		if not event is InputEventMouseButton or not event.pressed:
+			return
+		var point: Vector2 = event.position
+		var floor := Rect2(size.x * 0.16, size.y * 0.38, size.x * 0.68, size.y * 0.48)
+		var stage := Rect2(size.x * 0.66, size.y * 0.08, size.x * 0.28, size.y * 0.26)
+		if stage.has_point(point):
+			hotspot_pressed.emit("stage")
+		elif floor.has_point(point):
+			hotspot_pressed.emit("practice")
+		else:
+			hotspot_pressed.emit("builder")
+
+	func _draw() -> void:
+		var w := size.x
+		var h := size.y
+		draw_rect(Rect2(Vector2.ZERO, size), Color("#17152b"), true)
+		draw_circle(Vector2(w * 0.86, h * 0.1), h * 0.3, Color("#40366d"))
+		draw_circle(Vector2(w * 0.08, h * 0.84), h * 0.35, Color("#2a2850"))
+
+		var stage := Rect2(w * 0.66, h * 0.08, w * 0.28, h * 0.26)
+		draw_rect(stage, Color("#a64d78"), true)
+		draw_rect(stage, Color("#ffd18c"), false, 4)
+		draw_line(stage.position + Vector2(0, h * 0.08), stage.position + Vector2(stage.size.x, h * 0.08), Color("#ffe4b2"), 3)
+		for light_x in range(4):
+			var lx := stage.position.x + stage.size.x * (0.18 + light_x * 0.22)
+			draw_circle(Vector2(lx, stage.position.y + 10), 8, Color("#fff0b0"))
+			draw_line(Vector2(lx, stage.position.y + 18), Vector2(lx, stage.end.y), Color(1, 0.85, 0.55, 0.2), 2)
+
+		var floor := Rect2(w * 0.16, h * 0.38, w * 0.68, h * 0.48)
+		draw_rect(floor, Color("#6a4c73"), true)
+		draw_rect(floor, Color("#f3c6a5"), false, 4)
+		for index in range(maxi(room_level, 1)):
+			var x := floor.position.x + floor.size.x * (0.18 + index * 0.12)
+			draw_line(Vector2(x, floor.position.y), Vector2(x, floor.end.y), Color("#8f6b8e"), 2)
+
+		if "Mirrors" in decorations:
+			draw_rect(Rect2(w * 0.2, h * 0.12, w * 0.34, h * 0.16), Color("#84b8c2"), true)
+			draw_rect(Rect2(w * 0.2, h * 0.12, w * 0.34, h * 0.16), Color("#d6f4e8"), false, 4)
+			for mirror_x in range(4):
+				var mx := w * 0.22 + mirror_x * w * 0.075
+				draw_line(Vector2(mx, h * 0.14), Vector2(mx, h * 0.25), Color(1, 1, 1, 0.25), 2)
+		else:
+			draw_rect(Rect2(w * 0.2, h * 0.12, w * 0.34, h * 0.16), Color("#453f67"), false, 3)
+
+		if "Barres" in decorations:
+			draw_line(Vector2(w * 0.2, h * 0.33), Vector2(w * 0.53, h * 0.33), Color("#e6b07d"), 6)
+			draw_line(Vector2(w * 0.22, h * 0.33), Vector2(w * 0.22, h * 0.39), Color("#e6b07d"), 4)
+			draw_line(Vector2(w * 0.51, h * 0.33), Vector2(w * 0.51, h * 0.39), Color("#e6b07d"), 4)
+
+		if "Speaker wall" in decorations:
+			for speaker_x in range(3):
+				var speaker := Rect2(w * 0.56 + speaker_x * w * 0.035, h * 0.19, w * 0.025, h * 0.09)
+				draw_rect(speaker, Color("#292337"), true)
+				draw_circle(speaker.get_center(), 7, Color("#f5a66f"))
+
+		var positions := _dancer_positions(floor)
+		for index in range(dancer_count):
+			_draw_dancer(positions[index], index, mode == "rehearsal")
+
+		if mode == "rehearsal":
+			var pulse := 0.5 + 0.5 * sin(elapsed * 5.0)
+			draw_circle(Vector2(w * 0.8, h * 0.28), 18 + pulse * 8, Color(1, 0.86, 0.48, 0.2))
+			draw_circle(Vector2(w * 0.8, h * 0.28), 5, Color("#fff0b0"))
+
+	func _dancer_positions(floor: Rect2) -> Array:
+		var center := floor.get_center()
+		if formation == "Triangle":
+			return [center + Vector2(0, 55), center + Vector2(-105, -35), center + Vector2(105, -35)]
+		if formation == "Diamond":
+			return [center + Vector2(0, 70), center + Vector2(-115, 0), center + Vector2(115, 0)]
+		if formation == "V Formation":
+			return [center + Vector2(0, -55), center + Vector2(-125, 45), center + Vector2(125, 45)]
+		return [center + Vector2(-125, 0), center, center + Vector2(125, 0)]
+
+	func _draw_dancer(point: Vector2, index: int, moving: bool) -> void:
+		var bob := sin(elapsed * 3.0 + index) * (8.0 if moving else 3.0)
+		var pose := sin(elapsed * 4.0 + index * 1.7) * (24.0 if moving else 5.0)
+		var body := point + Vector2(0, bob)
+		var colors := [Color("#ff9d9d"), Color("#8ed8ff"), Color("#b8f28b")]
+		var skin := [Color("#ffd0b5"), Color("#c68668"), Color("#f2b28f")]
+		draw_circle(body + Vector2(0, -38), 18, skin[index % skin.size()])
+		draw_circle(body + Vector2(0, -42), 19, colors[index % colors.size()])
+		draw_rect(Rect2(body + Vector2(-15, -20), Vector2(30, 48)), colors[index % colors.size()], true)
+		draw_line(body + Vector2(-10, 0), body + Vector2(-24 - pose, 38), colors[index % colors.size()], 8)
+		draw_line(body + Vector2(10, 0), body + Vector2(24 + pose, 38), colors[index % colors.size()], 8)
+		draw_line(body + Vector2(-11, -7), body + Vector2(-35 - pose, -25), skin[index % skin.size()], 7)
+		draw_line(body + Vector2(11, -7), body + Vector2(35 + pose, -25), skin[index % skin.size()], 7)
+
 const DISCIPLINES := ["Jazz", "Lyrical", "Tap", "Ballet", "Contemporary", "Hip Hop", "Acro"]
 const MOVES := [
 	"Step Touch", "Pivot Turn", "Jazz Square", "Grand Jete",
@@ -100,7 +208,15 @@ func add_back() -> void:
 
 func show_home() -> void:
 	clear_screen("MARSHMELLOW DANCE STUDIO")
-	add_text("A playful offline choreography studio for your next big performance.", 21)
+	add_text("Your studio is open. Tap the room to practice, perform, or build.", 21)
+	var studio_view := StudioView.new()
+	studio_view.custom_minimum_size = Vector2(0, 390)
+	studio_view.room_level = room_level
+	studio_view.formation = formation
+	studio_view.dancer_count = maxi(students.size(), 3)
+	studio_view.decorations = decorations
+	studio_view.hotspot_pressed.connect(_studio_hotspot)
+	content.add_child(studio_view)
 	add_text("Students: %d  |  Skill points: %d  |  Routine counts: %d/8  |  Formation: %s" %
 		[students.size(), skills, routine.size(), formation])
 	add_text("Studio room level: %d  |  Upgrades: %s" %
@@ -117,6 +233,14 @@ func show_home() -> void:
 	add_button("Enter competition (20 coins)", compete)
 	add_button("Abi's feedback", show_feedback)
 	add_button("Save progress", save_and_confirm)
+
+func _studio_hotspot(name: String) -> void:
+	if name == "stage":
+		rehearse()
+	elif name == "practice":
+		practise()
+	else:
+		show_builder()
 
 func show_setup() -> void:
 	clear_screen("Studio setup")
@@ -237,11 +361,17 @@ func clear_routine() -> void:
 
 func rehearse() -> void:
 	clear_screen("Rehearsal stage")
-	add_text("STAGE FLOOR  •  %s formation  •  00:00 — 02:00" % formation, 22)
-	add_text("●     ●     ●\n\n     ◇ STUDIO LIGHTS ◇\n\n" +
-		("  →  ".join(routine) if not routine.is_empty() else "Add demo moves in the choreography editor."))
-	add_text("Demo playback uses labelled move beats. Full animated 3D dancers and licensed music are production milestones.")
+	add_text("Live rehearsal  •  %s formation  •  %d counts loaded" % [formation, routine.size()], 22)
+	var stage_view := StudioView.new()
+	stage_view.mode = "rehearsal"
+	stage_view.custom_minimum_size = Vector2(0, 430)
+	stage_view.formation = formation
+	stage_view.dancer_count = maxi(students.size(), 3)
+	stage_view.decorations = decorations
+	content.add_child(stage_view)
+	add_text("The dancers are moving through the rehearsal loop. Build an 8-count routine to choreograph the full phrase.", 18)
 	add_button("Replay performance", rehearse)
+	add_button("Edit routine", show_choreo)
 	add_back()
 
 func practise() -> void:

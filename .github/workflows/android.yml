@@ -21,7 +21,7 @@ jobs:
       - name: Install Godot and export templates
         uses: chickensoft-games/setup-godot@v2
         with:
-          version: 4.4.1
+          version: 4.2.2
           use-dotnet: false
           include-templates: true
 
@@ -38,6 +38,8 @@ jobs:
 
       - name: Configure Godot Android paths
         run: |
+          test -x "$ANDROID_HOME/platform-tools/adb"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/apksigner"
           mkdir -p "$HOME/.config/godot"
           cat > "$HOME/.config/godot/editor_settings-4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
@@ -45,14 +47,57 @@ jobs:
           [resource]
 
           export/android/android_sdk_path = "$ANDROID_HOME"
-          export/android/jdk_path = "$JAVA_HOME"
+          export/android/java_sdk_path = "$JAVA_HOME"
           EOF
 
       - name: Import and validate project
         run: godot --headless --editor --path . --quit
 
-      - name: Install Android build template
-        run: godot --headless --editor --path . --install-android-build-template
+      - name: Install Godot Android export templates
+        run: |
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.2.2.stable"
+          curl -fsSL -o /tmp/godot-templates.tpz \
+            https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_export_templates.tpz
+          unzip -p /tmp/godot-templates.tpz templates/android_debug.apk \
+            > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_debug.apk"
+          unzip -p /tmp/godot-templates.tpz templates/android_release.apk \
+            > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_release.apk"
+          unzip -p /tmp/godot-templates.tpz templates/android_source.zip \
+            > "$HOME/.local/share/godot/export_templates/4.2.2.stable/android_source.zip"
+
+      - name: Create debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          {
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$RUNNER_TEMP/debug.keystore"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure Godot Android export credentials
+        run: |
+          settings="$HOME/.config/godot/editor_settings-4.tres"
+          set_key() {
+            if grep -q "^$1 = " "$settings"; then
+              sed -i "s#^$1 = .*#$1 = \"$2\"#" "$settings"
+            else
+              sed -i "/^\[resource\]/a $1 = \"$2\"" "$settings"
+            fi
+          }
+          set_key "export/android/java_sdk_path" "$JAVA_HOME"
+          set_key "export/android/android_sdk_path" "$ANDROID_HOME"
+          set_key "export/android/debug_keystore" "$RUNNER_TEMP/debug.keystore"
+          set_key "export/android/debug_keystore_user" "androiddebugkey"
+          set_key "export/android/debug_keystore_pass" "android"
+          grep -n "export/android/\(java_sdk_path\|android_sdk_path\|debug_keystore\)" "$settings"
 
       - name: Build debug APK
         run: mkdir -p build && godot --headless --verbose --path . --export-debug "Android" build/marshmellow-dance-studio-debug.apk
